@@ -11,12 +11,7 @@
 // there are 3 types of instructions: A instruction, C instruction, Symbols
 // focus on A and C rn
 
-use std::{
-    fs::File,
-    io::{self, BufRead},
-};
-
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum InstructionVariant {
     A(String),
     C {
@@ -26,20 +21,28 @@ pub enum InstructionVariant {
     },
     Symbol(String),
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Instruction {
     pub variant: InstructionVariant,
     pub line_number: u32,
 }
 
-
 impl Instruction {
     pub fn rep(&self) -> String {
         match &self.variant {
             InstructionVariant::A(addr) => format!("@{}", addr),
-            InstructionVariant::C { comp, dest, jmp } => format!("{}={};{}", dest, comp, jmp),
+            InstructionVariant::C { comp, dest, jmp } => {
+                let mut build_string = String::new();
+                if !dest.is_empty() {
+                    build_string.push_str(&format!("{}=", dest));
+                }
+                build_string.push_str(&comp);
+                if !jmp.is_empty() {
+                    build_string.push_str(&format!(";{}", jmp));
+                }
+                build_string
+            }
             InstructionVariant::Symbol(symbol) => format!("({})", symbol),
-            _ => panic!("invalid"),
         }
     }
 }
@@ -50,93 +53,88 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new(file_path: &str) -> io::Result<Parser> {
-        let file = File::open(file_path)?;
-        let reader = io::BufReader::new(file);
-        let mut parser_state = Parser {
+    pub fn new() -> Parser {
+        Parser {
             instructions: Vec::new(),
             instructions_count: 0,
-        };
-
-        for line in reader.lines() {
-            let line = line?;
-            let trimmed_line = line.trim();
-            if trimmed_line.is_empty() {
-                continue;
-            }
-            let line_with_no_comment = trimmed_line.split("//").next().unwrap().trim();
-            if line_with_no_comment.is_empty() {
-                continue;
-            }
-
-            let mut cleaned_line: String = line_with_no_comment
-                .chars()
-                .filter(|char| !char.is_whitespace())
-                .collect();
-            let first_char = cleaned_line.chars().nth(0).unwrap();
-            if first_char == '@' {
-                // A instruction or variable symbol
-                cleaned_line = cleaned_line.chars().filter(|char| *char != '@').collect();
-                parser_state.instructions.push(Instruction {
-                    variant: InstructionVariant::A(cleaned_line),
-                    line_number: parser_state.instructions_count,
-                });
-                parser_state.instructions_count += 1;
-            } else if first_char == '(' {
-                // label symbol
-                cleaned_line = cleaned_line
-                    .chars()
-                    .filter(|char| *char != '(' && *char != ')')
-                    .collect();
-                parser_state.instructions.push(Instruction {
-                    variant: InstructionVariant::Symbol(cleaned_line),
-                    line_number: parser_state.instructions_count,
-                });
-                parser_state.instructions_count += 1;
-            } else {
-                // C instruction
-                // println!("{:?}",cleaned_line);
-                // first split
-                let splitted: Vec<&str> = cleaned_line.split("=").collect();
-                let mut dest: String = String::new();
-                let mut comp: String = String::new();
-                let mut jmp: String = String::new();
-
-                // splitted contains dest, comp and jmp
-                let jmp_statement: &str;
-
-                if splitted.len() == 2 {
-                    // has a comp and JMP statement
-                    dest = splitted[0].to_string();
-                    jmp_statement = splitted[1];
-                }
-                // only has a JMP statement
-                else if splitted.len() == 1 {
-                    jmp_statement = splitted[0];
-                } else {
-                    panic!("invalid instruction count!")
-                }
-                // second split
-                let splitted_jmp_statement: Vec<&str> = jmp_statement.split(";").collect();
-                // println!("{:?}",splitted_jmp_statement);
-                if splitted_jmp_statement.len() == 2 {
-                    comp = splitted_jmp_statement[0].to_string();
-                    jmp = splitted_jmp_statement[1].to_string();
-                } else if splitted_jmp_statement.len() == 1 {
-                    comp = splitted_jmp_statement[0].to_string();
-                }
-
-                // so i m thinking , depending on how I implement the mnemonic converter,
-                // the case where dest = "" or jmp = "", i wanted to set them to "null" but
-                // i dont think it's necessary, keeping this here in case.
-                parser_state.instructions.push(Instruction {
-                    variant: InstructionVariant::C { comp, dest, jmp },
-                    line_number: parser_state.instructions_count,
-                });
-            }
-            parser_state.instructions_count += 1;
         }
-        Ok(parser_state)
+    }
+    pub fn parse(&mut self, instruction: String) -> Instruction {
+        if instruction.len() <= 2 {
+            panic!("invalid!!!")
+        }
+        let mut cleaned_line: String = instruction
+            .chars()
+            .filter(|char| !char.is_whitespace())
+            .collect();
+        let first_char = cleaned_line.chars().nth(0).unwrap();
+        let parsed: Instruction;
+
+        if first_char == '@' {
+            // A instruction or variable symbol
+            cleaned_line = cleaned_line.chars().filter(|char| *char != '@').collect();
+            parsed = Instruction {
+                variant: InstructionVariant::A(cleaned_line),
+                line_number: self.instructions_count,
+            };
+            self.instructions.push(parsed.clone());
+            self.instructions_count += 1;
+        } else if first_char == '(' {
+            // label symbol
+            cleaned_line = cleaned_line
+                .chars()
+                .filter(|char| *char != '(' && *char != ')')
+                .collect();
+            parsed = Instruction {
+                variant: InstructionVariant::Symbol(cleaned_line),
+                line_number: self.instructions_count + 1,
+            };
+            self.instructions.push(parsed.clone());
+            // not sure why i am storing this as an instruction yet
+        } else {
+            // C instruction
+            // println!("{:?}",cleaned_line);
+            // first split
+            let splitted: Vec<&str> = cleaned_line.split("=").collect();
+            let mut dest: String = String::new();
+            let mut comp: String = String::new();
+            let mut jmp: String = String::new();
+
+            // splitted contains dest, comp and jmp
+            let jmp_statement: &str;
+
+            if splitted.len() == 2 {
+                // has a comp and JMP statement
+                dest = splitted[0].to_string();
+                jmp_statement = splitted[1];
+            }
+            // only has a JMP statement
+            else if splitted.len() == 1 {
+                jmp_statement = splitted[0];
+            } else {
+                panic!("invalid instruction count!")
+            }
+            // second split
+            let splitted_jmp_statement: Vec<&str> = jmp_statement.split(";").collect();
+            // println!("{:?}",splitted_jmp_statement);
+            if splitted_jmp_statement.len() == 2 {
+                comp = splitted_jmp_statement[0].to_string();
+                jmp = splitted_jmp_statement[1].to_string();
+            } else if splitted_jmp_statement.len() == 1 {
+                comp = splitted_jmp_statement[0].to_string();
+            }
+
+            // so i m thinking , depending on how I implement the mnemonic converter,
+            // the case where dest = "" or jmp = "", i wanted to set them to "null" but
+            // i dont think it's necessary, keeping this here in case.
+            parsed = Instruction {
+                variant: InstructionVariant::C { comp, dest, jmp },
+                line_number: self.instructions_count,
+            };
+            self.instructions.push(parsed.clone());
+        }
+        self.instructions_count += 1;
+        return parsed;
     }
 }
 
@@ -144,12 +142,51 @@ impl Parser {
 mod tests {
     use super::*;
 
+    fn parser_init() -> Parser {
+        Parser::new()
+    }
+
+    fn sample_instruction() -> String{
+        "D=D-M".to_string()
+    }
+
     #[test]
-    fn parser_test() {
-        let parser = Parser::new("Max.asm");
-        match parser {
-            Ok(p) => println!("{:?}",p.instructions),
-            Err(_) => println!("error!")
-        }
+    fn parser_init_test() {
+        let parser = parser_init();
+        assert_eq!(parser.instructions_count, 0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn parser_test_invalid_instruction() {
+        let mut parser = parser_init();
+        let parsed = parser.parse("".to_string());
+    }
+
+    #[test]
+    fn parser_test_C_Instruction() {
+        let mut parser = parser_init();
+        let parsed = parser.parse(sample_instruction());
+        assert_eq!(parser.instructions_count, 1);
+        assert_eq!(parsed.line_number, 0);
+        assert_eq!(
+            parsed.variant,
+            InstructionVariant::C {
+                comp: "D-M".to_string(),
+                dest: "D".to_string(),
+                jmp: String::new()
+            }
+        );
+        assert_eq!(parsed.rep(),sample_instruction());
+    }
+
+    #[test]
+    fn parser_test_A_Instruction() {
+
+    }
+
+    #[test]
+    fn parser_test_Symbol() {
+
     }
 }
