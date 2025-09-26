@@ -59,8 +59,8 @@ pub struct Parser {
 }
 
 impl Parser {
-    pub fn new() -> Parser {
-        Parser {
+    pub fn new() -> Self {
+        Self {
             instructions: Vec::new(),
             instructions_count: 0,
         }
