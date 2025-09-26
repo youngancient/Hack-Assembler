@@ -12,6 +12,7 @@ pub fn assemble(file_path: &str) -> io::Result<()> {
     let reader = io::BufReader::new(file);
     let mut parser = Parser::new();
 
+    // first pass
     for line in reader.lines() {
         let line = line?;
         let trimmed_line = line.trim();

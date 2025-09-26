@@ -19,7 +19,7 @@ pub enum InstructionVariant {
         dest: String,
         jmp: String,
     },
-    Symbol(String),
+    Symbol(String, bool),
 }
 #[derive(Debug, Clone)]
 pub struct Instruction {
@@ -42,7 +42,13 @@ impl Instruction {
                 }
                 build_string
             }
-            InstructionVariant::Symbol(symbol) => format!("({})", symbol),
+            InstructionVariant::Symbol(symbol, is_variable) => {
+                if *is_variable {
+                    format!("@{}", symbol)
+                } else {
+                    format!("({})", symbol)
+                }
+            }
         }
     }
 }
@@ -73,10 +79,20 @@ impl Parser {
         if first_char == '@' {
             // A instruction or variable symbol
             cleaned_line = cleaned_line.chars().filter(|char| *char != '@').collect();
-            parsed = Instruction {
-                variant: InstructionVariant::A(cleaned_line),
-                line_number: self.instructions_count,
-            };
+            // check if the instruction is strictly an A-instruction like @10 -> checks 10
+            //  cos we could have @var -> checks var
+            if let Ok(_) = cleaned_line.parse::<u32>() {
+                // cleaned_line is a number and hence a valid A-instruction
+                parsed = Instruction {
+                    variant: InstructionVariant::A(cleaned_line),
+                    line_number: self.instructions_count,
+                };
+            } else {
+                parsed = Instruction {
+                    variant: InstructionVariant::Symbol(cleaned_line, true), // it's a variable symbol
+                    line_number: self.instructions_count,
+                };
+            }
             self.instructions.push(parsed.clone());
             self.instructions_count += 1;
         } else if first_char == '(' {
@@ -86,7 +102,7 @@ impl Parser {
                 .filter(|char| *char != '(' && *char != ')')
                 .collect();
             parsed = Instruction {
-                variant: InstructionVariant::Symbol(cleaned_line),
+                variant: InstructionVariant::Symbol(cleaned_line, false), // it's not a variable , it's a label
                 line_number: self.instructions_count + 1,
             };
             self.instructions.push(parsed.clone());
@@ -132,8 +148,8 @@ impl Parser {
                 line_number: self.instructions_count,
             };
             self.instructions.push(parsed.clone());
+            self.instructions_count += 1;
         }
-        self.instructions_count += 1;
         return parsed;
     }
 }
@@ -146,8 +162,17 @@ mod tests {
         Parser::new()
     }
 
-    fn sample_instruction() -> String{
+    fn sample_c_instruction() -> String {
         "D=D-M".to_string()
+    }
+    fn sample_a_instruction() -> String {
+        "@10".to_string()
+    }
+    fn sample_symbol() -> String {
+        "(ITSR0)".to_string()
+    }
+    fn sample_symbol_variable() -> String {
+        "@var".to_string()
     }
 
     #[test]
@@ -160,13 +185,13 @@ mod tests {
     #[should_panic]
     fn parser_test_invalid_instruction() {
         let mut parser = parser_init();
-        let parsed = parser.parse("".to_string());
+        parser.parse("".to_string());
     }
 
     #[test]
-    fn parser_test_C_Instruction() {
+    fn parser_test_c_instruction() {
         let mut parser = parser_init();
-        let parsed = parser.parse(sample_instruction());
+        let parsed = parser.parse(sample_c_instruction());
         assert_eq!(parser.instructions_count, 1);
         assert_eq!(parsed.line_number, 0);
         assert_eq!(
@@ -177,16 +202,42 @@ mod tests {
                 jmp: String::new()
             }
         );
-        assert_eq!(parsed.rep(),sample_instruction());
+        assert_eq!(parsed.rep(), sample_c_instruction());
     }
 
     #[test]
-    fn parser_test_A_Instruction() {
-
+    fn parser_test_a_instruction() {
+        let mut parser = parser_init();
+        let parsed = parser.parse(sample_a_instruction());
+        assert_eq!(parser.instructions_count, 1);
+        assert_eq!(parsed.line_number, 0);
+        assert_eq!(parsed.variant, InstructionVariant::A("10".to_string()));
+        assert_eq!(parsed.rep(), sample_a_instruction());
     }
 
     #[test]
-    fn parser_test_Symbol() {
+    fn parser_test_variable_symbol() {
+        let mut parser = parser_init();
+        let parsed = parser.parse(sample_symbol_variable());
+        assert_eq!(parser.instructions_count, 1);
+        assert_eq!(parsed.line_number, 0);
+        assert_eq!(
+            parsed.variant,
+            InstructionVariant::Symbol("var".to_string(), true)
+        );
+        assert_eq!(parsed.rep(), sample_symbol_variable());
+    }
 
+    #[test]
+    fn parser_test_symbol() {
+        let mut parser = parser_init();
+        let parsed = parser.parse(sample_symbol());
+        assert_eq!(parser.instructions_count, 0);
+        assert_eq!(parsed.line_number, 1);
+        assert_eq!(
+            parsed.variant,
+            InstructionVariant::Symbol("ITSR0".to_string(), false)
+        );
+        assert_eq!(parsed.rep(), sample_symbol());
     }
 }
