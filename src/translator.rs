@@ -6,8 +6,6 @@
 // functions for comp, dest , jmp and one that uses the three functions to return the binary string for C Instructions
 // function for returning the binary string for A intruction
 
-use crate::parser::Instruction;
-
 // returns a 7-bit binary string repping the comp bit
 // a c1 c2 c3 c4 c5 c6
 pub fn comp(comp_instruction: &str) -> String {

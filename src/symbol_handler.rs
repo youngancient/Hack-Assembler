@@ -65,9 +65,14 @@ impl SymbolTable {
     }
     // checks if symbol is in the table, if in table, ignore
     // else, add to table
-    pub fn add_symbol(&mut self,new_symbol: (String, u16)){
-        if !self.contains_symbol(&new_symbol.0) {
-            self.symbol_table.insert(new_symbol.0, new_symbol.1);
+    pub fn add_symbol(&mut self,new_symbol: &str, memory_address : u16, is_variable : bool){
+        if !self.contains_symbol(&new_symbol) {
+            self.symbol_table.insert(new_symbol.to_string(), memory_address);
+            if is_variable{
+                // increment the free address if the symbol added is a variable
+                // since labels dont take up space in memory, they are ignored
+                self.increment_next_free_address();
+            }
         }
     }
 
@@ -82,6 +87,19 @@ impl SymbolTable {
             return *value;
         }else{
             panic!("symbol not registered in symbol table");
+        }
+    }
+
+    pub fn get_next_free_address(&self) -> u16{
+        self.next_free_address
+    }
+    
+    // increments the next free address variable
+    fn increment_next_free_address(&mut self){
+        if self.next_free_address + 1 > u16::MAX{
+            panic!("Spurious dragon Error: cannot exceed {} variables",u16::MAX);
+        } else{
+            self.next_free_address += 1;
         }
     }
 }
@@ -107,7 +125,7 @@ mod tests{
     fn test_add_symbol(){
         let mut symbol_table = init_symbol_table();
         assert_eq!(symbol_table.contains_symbol("n"),false);
-        symbol_table.add_symbol(("n".to_string(),16));
+        symbol_table.add_symbol("n",16,true);
         assert_eq!(symbol_table.contains_symbol("n"),true);
         assert_eq!(symbol_table.get_memory_address("n"),16);
     }

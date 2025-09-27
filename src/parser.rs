@@ -19,12 +19,12 @@ pub enum InstructionVariant {
         dest: String,
         jmp: String,
     },
-    Symbol(String, bool),
+    Symbol{ symbol : String, is_variable : bool},
 }
 #[derive(Debug, Clone)]
 pub struct Instruction {
     pub variant: InstructionVariant,
-    pub line_number: u32,
+    pub line_number: u16,
 }
 
 impl Instruction {
@@ -42,7 +42,7 @@ impl Instruction {
                 }
                 build_string
             }
-            InstructionVariant::Symbol(symbol, is_variable) => {
+            InstructionVariant::Symbol { symbol, is_variable } => {
                 if *is_variable {
                     format!("@{}", symbol)
                 } else {
@@ -54,19 +54,17 @@ impl Instruction {
 }
 
 pub struct Parser {
-    pub instructions: Vec<Instruction>,
-    pub instructions_count: u32,
+    pub instructions_count: u16,
 }
 
 impl Parser {
     pub fn new() -> Self {
         Self {
-            instructions: Vec::new(),
             instructions_count: 0,
         }
     }
     pub fn parse(&mut self, instruction: String) -> Instruction {
-        if instruction.len() <= 2 {
+        if instruction.len() < 1 {
             panic!("invalid!!!")
         }
         let mut cleaned_line: String = instruction
@@ -89,11 +87,10 @@ impl Parser {
                 };
             } else {
                 parsed = Instruction {
-                    variant: InstructionVariant::Symbol(cleaned_line, true), // it's a variable symbol
-                    line_number: self.instructions_count,
+                    variant: InstructionVariant::Symbol { symbol: cleaned_line, is_variable: true }, // it's a variable symbol
+                    line_number: self.instructions_count, 
                 };
             }
-            self.instructions.push(parsed.clone());
             self.instructions_count += 1;
         } else if first_char == '(' {
             // label symbol
@@ -102,14 +99,11 @@ impl Parser {
                 .filter(|char| *char != '(' && *char != ')')
                 .collect();
             parsed = Instruction {
-                variant: InstructionVariant::Symbol(cleaned_line, false), // it's not a variable , it's a label
-                line_number: self.instructions_count + 1,
+                variant: InstructionVariant::Symbol { symbol: cleaned_line, is_variable: false }, // it's not a variable , it's a label
+                line_number: self.instructions_count,
             };
-            self.instructions.push(parsed.clone());
-            // not sure why i am storing this as an instruction yet
         } else {
             // C instruction
-            // println!("{:?}",cleaned_line);
             // first split
             let splitted: Vec<&str> = cleaned_line.split("=").collect();
             let mut dest: String = String::new();
@@ -147,10 +141,13 @@ impl Parser {
                 variant: InstructionVariant::C { comp, dest, jmp },
                 line_number: self.instructions_count,
             };
-            self.instructions.push(parsed.clone());
             self.instructions_count += 1;
         }
+        // println!("{} line number is {}", parsed.rep(),parsed.line_number);
         return parsed;
+    }
+    pub fn clear(&mut self){
+        self.instructions_count = 0;
     }
 }
 
@@ -223,7 +220,7 @@ mod tests {
         assert_eq!(parsed.line_number, 0);
         assert_eq!(
             parsed.variant,
-            InstructionVariant::Symbol("var".to_string(), true)
+            InstructionVariant::Symbol { symbol: "var".to_string(), is_variable: true }
         );
         assert_eq!(parsed.rep(), sample_symbol_variable());
     }
@@ -236,7 +233,7 @@ mod tests {
         assert_eq!(parsed.line_number, 1);
         assert_eq!(
             parsed.variant,
-            InstructionVariant::Symbol("ITSR0".to_string(), false)
+            InstructionVariant::Symbol { symbol: "ITSR0".to_string(), is_variable: false }
         );
         assert_eq!(parsed.rep(), sample_symbol());
     }
