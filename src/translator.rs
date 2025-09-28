@@ -21,6 +21,7 @@ pub fn comp(comp_instruction: &str) -> String {
         a_bit.push('0');
         normalized_string = comp_instruction.to_string();
     }
+    
     match normalized_string.as_str() {
         "0" => format!("{}101010", a_bit),
         "1" => format!("{}111111", a_bit),
@@ -37,9 +38,10 @@ pub fn comp(comp_instruction: &str) -> String {
         "A-1" => format!("{}110010", a_bit),
         "D+A" => format!("{}000010", a_bit),
         "D-A" => format!("{}010011", a_bit),
+        "A-D" => format!("{}000111",a_bit),
         "D&A" => format!("{}000000", a_bit),
         "D|A" => format!("{}010101", a_bit),
-        _ => panic!("invalid comp instruction"),
+        _ => {panic!("invalid comp instruction")},
     }
 }
 

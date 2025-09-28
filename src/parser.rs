@@ -67,13 +67,14 @@ impl Parser {
         if instruction.len() < 1 {
             panic!("invalid!!!")
         }
+        
         let mut cleaned_line: String = instruction
             .chars()
             .filter(|char| !char.is_whitespace())
             .collect();
         let first_char = cleaned_line.chars().nth(0).unwrap();
         let parsed: Instruction;
-
+        
         if first_char == '@' {
             // A instruction or variable symbol
             cleaned_line = cleaned_line.chars().filter(|char| *char != '@').collect();
@@ -143,7 +144,6 @@ impl Parser {
             };
             self.instructions_count += 1;
         }
-        // println!("{} line number is {}", parsed.rep(),parsed.line_number);
         return parsed;
     }
     pub fn clear(&mut self){

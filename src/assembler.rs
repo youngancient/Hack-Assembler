@@ -36,7 +36,7 @@ pub fn extract_file_name(file_name_or_path: &str ) -> String {
         .to_string()
 }
 
-pub fn assemble(file_name_or_path: &str) -> io::Result<(bool)> {
+pub fn assemble(file_name_or_path: &str) -> io::Result<bool> {
     let file = File::open(file_name_or_path)?;
     let reader = io::BufReader::new(file);
     let lines: Vec<String> = reader.lines().collect::<Result<Vec<_>, _>>()?;
@@ -114,7 +114,7 @@ pub fn assemble(file_name_or_path: &str) -> io::Result<(bool)> {
     let mut file = File::create(file_path)?;
     file.write_all(output_string.as_bytes())?;
 
-    Ok((true))
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -123,10 +123,10 @@ mod tests {
 
     #[test]
     fn parser_test() {
-        let assembler_1 = assemble("./input/add.asm");
-        let assembler_2 = assemble("./input/Max.asm");
-        let assembler_3 = assemble("./input/Rect.asm");
-        // let assembler_3 = assemble("./input/Pong.asm");
+        // let assembler_1 = assemble("./input/add.asm");
+        // let assembler_2 = assemble("./input/Max.asm");
+        // let assembler_3 = assemble("./input/Rect.asm");
+        let assembler_3 = assemble("./input/Pong.asm");
     }
 
     #[test]
