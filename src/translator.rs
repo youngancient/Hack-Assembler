@@ -56,7 +56,7 @@ pub fn dest(dest_instruction: &str) -> String {
         "AM" => String::from("101"),
         "AD" => String::from("110"),
         "AMD" => String::from("111"),
-        _ => panic!("invalid jump instruction"),
+        _ => panic!("invalid dest instruction"),
     }
 }
 
