@@ -12,6 +12,9 @@ fn main() {
             args.len()
         );
     }
+    if args.len() - 1 == 0 {
+        panic!("Expected atleast one .asm file: Found none!");
+    }
     for arg in args.iter().skip(1) {
         let file_name = assembler::extract_file_name(&arg);
         println!("Assembling file : {}.asm",file_name);

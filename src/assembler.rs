@@ -126,7 +126,6 @@ mod tests {
         let assembler_1 = assemble("./input/Add.asm");
         let assembler_2 = assemble("./input/Max.asm");
         let assembler_3 = assemble("./input/Rect.asm");
-        let assembler_3 = assemble("./input/Pong.asm");
     }
 
     #[test]
@@ -137,5 +136,10 @@ mod tests {
     #[test]
     fn test_extract_file_path(){
         assert_eq!("Rect", extract_file_name("./input/Rect.asm"));
+    }
+
+    #[test]
+    fn test_extract_file_path_2(){
+        assert_eq!("Rect", extract_file_name("Rect"));
     }
 }
