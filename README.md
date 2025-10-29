@@ -39,7 +39,7 @@ src/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/hack-assembler.git
+git clone https://github.com/youngancient/Hack-Assembler.git
 ```
 ### 2. Enter the repo directory
 ```bash
